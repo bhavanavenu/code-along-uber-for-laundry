@@ -8,7 +8,14 @@ const hbs          = require('hbs');
 const mongoose     = require('mongoose');
 const logger       = require('morgan');
 const path         = require('path');
+const authRoutes = require('./routes/auth');
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);   
 
+const app = express();
+const index = require('./routes/index');
+app.use('/', index);
+app.use('/', authRoutes);
 
 mongoose.Promise = Promise;
 mongoose
@@ -22,13 +29,29 @@ mongoose
 const app_name = require('./package.json').name;
 const debug = require('debug')(`${app_name}:${path.basename(__filename).split('.')[0]}`);
 
-const app = express();
+// const app = express();
 
 // Middleware Setup
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(session({
+  secret: 'never do your own laundry again',
+  resave: true,
+  saveUninitialized: true,
+  cookie: { maxAge: 60000 },
+  store: new MongoStore({
+    mongooseConnection: mongoose.connection,
+    ttl: 24 * 60 * 60 // 1 day
+  })
+}));
+
+app.use('/', index);
 
 // Express View engine setup
 
@@ -51,8 +74,8 @@ app.locals.title = 'Express - Generated with IronGenerator';
 
 
 
-const index = require('./routes/index');
-app.use('/', index);
+// const index = require('./routes/index');
+// app.use('/', index);
 
 
 module.exports = app;
